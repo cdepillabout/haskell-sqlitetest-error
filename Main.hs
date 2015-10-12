@@ -13,8 +13,9 @@ import Control.Concurrent (threadDelay)
 import Control.Monad (void)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Logger (runStderrLoggingT)
+import Database.Persist (getBy, insert)
 import Database.Persist.TH (mkMigrate, mkPersist, persistLowerCase, share, sqlSettings)
-import Database.Persist.Sqlite (insert, getBy, runMigration, runSqlPool, withSqlitePool)
+import Database.Persist.Sqlite (runMigration, runSqlConn, withSqliteConn)
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 Foo
@@ -26,9 +27,9 @@ Foo
 
 main :: IO ()
 main =
-   runStderrLoggingT $ withSqlitePool ":memory:" 1 $ \pool -> do
-     runSqlPool (runMigration migrateAll) pool
-     void $ runSqlPool (insert $ Foo 1) pool
+   runStderrLoggingT $ withSqliteConn ":memory:" $ \sqlbackend -> do
+     runSqlConn (runMigration migrateAll) sqlbackend
+     void $ runSqlConn (insert $ Foo 1) sqlbackend
      liftIO $ threadDelay (60 * 1000000)
-     ret <- runSqlPool (getBy $ UniqueBar 1) pool
+     ret <- runSqlConn (getBy $ UniqueBar 1) sqlbackend
      liftIO $ print ret
